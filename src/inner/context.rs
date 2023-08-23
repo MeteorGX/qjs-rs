@@ -1,30 +1,25 @@
-use crate::{JSError, JSResult, JSRuntime, qjs};
-use crate::inner::value::JSValue;
-use crate::utils::make_cstring;
+use crate::{JSError, JSResult, JSRuntime, qjs_c};
 
 #[derive(Debug)]
 #[allow(dead_code)]
-pub struct JSContext<'a> {
-    runtime: &'a JSRuntime,
-    pub(crate) c_ctx: *mut qjs::JSContext,
+pub struct JSContext<'rt> {
+    runtime: &'rt JSRuntime,
+    pub(crate) c_ctx: *mut qjs_c::JSContext,
 }
 
 
-impl<'a> Drop for JSContext<'a> {
+impl<'rt> Drop for JSContext<'rt> {
     fn drop(&mut self) {
         unsafe {
-            qjs::JS_FreeContext(self.c_ctx)
+            qjs_c::JS_FreeContext(self.c_ctx)
         }
     }
 }
 
 
-impl<'a> JSContext<'a> {
-    pub(crate) const DEFAULT_SCRIPT_NAME: &'static str = "script.js";
-
-
-    pub fn new(rt: &'a JSRuntime) -> JSResult<Self> {
-        let ctx = unsafe { qjs::JS_NewContext(rt.c_runtime) };
+impl<'rt> JSContext<'rt> {
+    pub fn new(rt: &'rt JSRuntime) -> JSResult<Self> {
+        let ctx = unsafe { qjs_c::JS_NewContext(rt.c_runtime) };
         if ctx.is_null() {
             return Err(JSError::CreateContext);
         }
@@ -35,25 +30,9 @@ impl<'a> JSContext<'a> {
     }
 
 
-    pub(crate) fn qjs_eval(&self, script: &str, flag: i32, code: &str) -> JSResult<JSValue> {
-        let filename_c = make_cstring(script)?;
-        let code_c = make_cstring(code)?;
-        let value = unsafe {
-            qjs::JS_Eval(
-                self.c_ctx,
-                code_c.as_ptr(),
-                code.len() as _,
-                filename_c.as_ptr(),
-                flag,
-            )
-        };
-
-        JSValue::new(&self, value)
-    }
-
-
-    pub fn eval(&self, code: &str) -> JSResult<JSValue> {
-        Ok(self.qjs_eval(Self::DEFAULT_SCRIPT_NAME, qjs::JS_EVAL_TYPE_GLOBAL as i32, code)?)
+    /// JS_DumpMemoryUsage
+    pub fn dump_mem(&self){
+        self.runtime.dump_mem();
     }
 }
 

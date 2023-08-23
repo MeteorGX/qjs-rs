@@ -17,3 +17,10 @@ void JS_DupValueRT_Inline(JSRuntime *rt, JSValue v){
     JS_DupValueRT(rt,v);
 };
 
+
+
+void JS_DupRTMemoryInfo(JSRuntime *rt){
+        JSMemoryUsage stats;
+        JS_ComputeMemoryUsage(rt, &stats);
+        JS_DumpMemoryUsage(stdout, &stats, rt);
+};

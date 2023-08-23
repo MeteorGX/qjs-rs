@@ -5,14 +5,15 @@
 
 /// private api regin
 #[allow(unused)]
-pub(crate) mod qjs{
+pub(crate) mod qjs_c {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
 
 mod error;
-mod inner;
+
 mod utils;
+mod inner;
 
 
 pub use error::{
@@ -22,7 +23,7 @@ pub use error::{
 
 
 pub use inner::{
+    JSEvalType,
     JSRuntime,
     JSContext,
-    JSValue,
 };

@@ -9,17 +9,12 @@ build = "build.rs"
 [dependencies]
 libc = { version = "0.2", optional = true }
 chrono = { version = "0.4", optional = true }
-num-bigint = { version = "0.4", optional = true }
-num-bigfloat = { version = "1.6", optional = true }
-num-traits = { version = "0.2", optional = true }
 log = { version = "0.4", optional = true }
 
 [features]
 source = ["cc", "bindgen"]
-bigint = ["num-traits", "num-bigint"]
-bigfloat = ["num-traits", "num-bigfloat"]
-default = ["libc", "chrono", "bigint", "bigfloat", "log", "source"]
+default = ["libc", "chrono", "log", "source"]
 
 [build-dependencies]
 cc = { version = "1.0", optional = true }
-bindgen = { version = "0.66", optional = true ,features = ["experimental"]}
+bindgen = { version = "0.66", optional = true, features = ["experimental"] }

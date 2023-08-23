@@ -1,9 +1,18 @@
 #include "quickjs.h"
 
+
+// INLINE
 void JS_FreeValue_Inline(JSContext *ctx, JSValue v);
 void JS_FreeValueRT_Inline(JSRuntime *rt, JSValue v);
 void JS_DupValue_Inline(JSContext *ctx, JSValue v);
 void JS_DupValueRT_Inline(JSRuntime *rt, JSValue v);
+void JS_DumpGCObject_Inline(JSRuntime *rt, JSGCObjectHeader *p);
+
+
+// DUMP
+void JS_DupRTMemoryInfo(JSRuntime *rt);
+
+
 
 
 int JS_VALUE_IS_NAN_Inline(JSValue v){ return JS_VALUE_IS_NAN(v); };//AWK CREATE[DONT REMOVE] 

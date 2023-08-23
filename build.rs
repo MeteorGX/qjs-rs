@@ -154,7 +154,7 @@ fn main() {
         .files(files)
         .define("_GUN_SOURCE", None)
         .define("CONFIG_VERSION", format!("\"{}\"", version.trim()).as_str())
-        .define("CONFIG_BIGNUM", None)
+        .define("CONFIG_BIGNUM", "1")
         .flag_if_supported("-Wchar-subscripts")
         .flag_if_supported("-Wno-array-bounds")
         .flag_if_supported("-Wno-format-truncation")
@@ -180,6 +180,7 @@ fn main() {
         .header(wrapper_file)
         .size_t_is_usize(true)
         .generate_inline_functions(true)
+        .wrap_static_fns(true)
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()
         .expect("Unable to generate bindings");
