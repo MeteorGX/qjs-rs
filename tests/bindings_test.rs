@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use qjs_rs::{JSContext, JSRuntime, JSAny, JSRawType};
 
     #[test]
@@ -132,7 +133,7 @@ mod tests {
 
                 // env array
                 let vars:Vec<String> = std::env::args().collect();
-                let global_name = "__ENV__";
+                let global_name = "__ARG__";
                 let res = ctx.global_val(global_name, vars);
                 assert!(res.is_ok());
 
@@ -152,6 +153,19 @@ mod tests {
                 }
 
 
+                // object
+                let envs:HashMap<String,String> = std::env::vars().collect();
+                let global_name = "__ENV__";
+                let res = ctx.global_val(global_name, envs);
+                assert!(res.is_ok());
+
+
+                // print
+                let res = ctx.eval(script, global_name);
+                assert!(res.is_ok());
+                if let JSAny::Object(arr) = res.unwrap(){
+                    println!("ARRAY[TWO] = {:?}",arr);
+                }
 
                 ctx.dump_mem();
             }

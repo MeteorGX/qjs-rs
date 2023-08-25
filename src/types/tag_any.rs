@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::{JSArray, JSContext, JSError, JSResult, qjs_c};
 pub(super) use crate::types::tag_int::JSInt;
 pub(super) use crate::types::tag_big_float::JSBigFloat;
@@ -15,6 +16,7 @@ pub(super) use crate::types::tag_object::JSObject;
 pub(super) use crate::types::tag_string::JSStr;
 pub(super) use crate::types::tag_undefined::JSUndefined;
 pub(super) use crate::types::tag_uninitialized::JSUninitialized;
+use crate::utils::make_cstring;
 
 
 #[derive(Debug)]
@@ -43,6 +45,7 @@ pub enum JSAny<'ctx, 'rt> {
 
 
 impl<'ctx, 'rt> JSAny<'ctx, 'rt> {
+    /// JS type -> Rust Type
     pub(crate) fn with(ctx: &'ctx JSContext<'rt>, v: qjs_c::JSValue) -> JSResult<Self> {
         match v.tag as i32 {
             // first
@@ -152,11 +155,11 @@ impl<'ctx, 'rt> JSAny<'ctx, 'rt> {
 
             // ------------------------------------------------
             qjs_c::JS_TAG_OBJECT => {
-                if unsafe{ qjs_c::JS_IsArray(ctx.c_ctx,v) == 1 } {
+                if unsafe { qjs_c::JS_IsArray(ctx.c_ctx, v) == 1 } {
                     return Ok(Self::Array(JSArray::with(
                         ctx,
-                        v
-                    )?))
+                        v,
+                    )?));
                 }
 
 
@@ -171,6 +174,7 @@ impl<'ctx, 'rt> JSAny<'ctx, 'rt> {
     }
 
 
+    /// Rust Type -> Js Type
     pub(crate) fn wrap(ctx: &'ctx JSContext<'rt>, wrap: JSAnyWrapper) -> JSResult<qjs_c::JSValue> {
         match wrap {
             JSAnyWrapper::Undefined => Ok(qjs_c::JSValue {
@@ -206,7 +210,7 @@ impl<'ctx, 'rt> JSAny<'ctx, 'rt> {
                 };
 
                 return Ok(v);
-            },
+            }
 
             // ----------------------------------------
             JSAnyWrapper::Array(values) => {
@@ -245,6 +249,45 @@ impl<'ctx, 'rt> JSAny<'ctx, 'rt> {
 
                 return Ok(lists);
             }
+
+            // ----------------------------------------
+            JSAnyWrapper::Object(values) => {
+                let obj = unsafe { qjs_c::JS_NewObject(ctx.c_ctx) };
+                if obj.tag as i32 == qjs_c::JS_TAG_EXCEPTION {
+                    return Err(JSError::Internal("could not create object in runtime".into()));
+                }
+
+                for (key, value) in values {
+                    let key_c = make_cstring(key)?;
+
+                    // fetch value
+                    let v = match JSAny::wrap(ctx, value) {
+                        Ok(hit) => hit,
+                        Err(e) => {
+                            unsafe { qjs_c::JS_FreeValue_Inline(ctx.c_ctx, obj) }
+                            return Err(e);
+                        }
+                    };
+
+                    // search key exists
+                    let ret = unsafe {
+                        qjs_c::JS_DefinePropertyValueStr(
+                            ctx.c_ctx,
+                            obj,
+                            key_c.as_ptr(),
+                            v,
+                            qjs_c::JS_PROP_C_W_E as _,
+                        )
+                    };
+
+                    if ret < 0 {
+                        unsafe { qjs_c::JS_FreeValue_Inline(ctx.c_ctx, obj) }
+                        return Err(JSError::Internal("could not append element to object".into()));
+                    }
+                }
+
+                return Ok(obj);
+            }
         }
     }
 }
@@ -260,8 +303,8 @@ pub enum JSAnyWrapper {
     Float(f64),
     String(String),
     Array(Vec<JSAnyWrapper>),
+    Object(HashMap<String, JSAnyWrapper>),
 
-    // Object(HashMap<String,JSAnyWrapper>)
     //BigInt(i128),
 }
 
@@ -438,3 +481,38 @@ impl<T> TryFrom<JSAnyWrapper> for Vec<T>
 
 
 // array end  -----------------------------------------------------------------------------------
+
+
+impl<K, V> From<HashMap<K, V>> for JSAnyWrapper
+    where K: Into<String>, V: Into<JSAnyWrapper> {
+    fn from(value: HashMap<K, V>) -> Self {
+        let values = value
+            .into_iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect();
+        Self::Object(values)
+    }
+}
+
+
+impl<V> TryFrom<JSAnyWrapper> for HashMap<String, V>
+    where V: TryFrom<JSAnyWrapper> {
+    type Error = JSError;
+
+    fn try_from(value: JSAnyWrapper) -> Result<Self, Self::Error> {
+        match value {
+            JSAnyWrapper::Object(value) => {
+                value
+                    .into_iter()
+                    .map(|(k, v)| match v.try_into() {
+                        Ok(v) => Ok((k, v)),
+                        Err(_) => Err(JSError::UnexpectedType)
+                    }).collect()
+            }
+            _ => Err(JSError::UnexpectedType)
+        }
+    }
+}
+
+
+// object end  -----------------------------------------------------------------------------------
