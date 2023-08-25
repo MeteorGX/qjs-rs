@@ -14,6 +14,7 @@ mod error;
 
 mod utils;
 mod inner;
+mod types;
 
 
 pub use error::{
@@ -21,9 +22,13 @@ pub use error::{
     JSResult,
 };
 
-
+pub use types::*;
 pub use inner::{
     JSEvalType,
     JSRuntime,
     JSContext,
 };
+
+
+
+
